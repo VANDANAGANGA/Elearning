@@ -8,6 +8,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate
 from phonenumber_field.serializerfields import PhoneNumberField
 from.models import UserAccount
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
+
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -51,4 +54,3 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         user.save()
         
         return user
-

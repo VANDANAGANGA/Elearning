@@ -6,10 +6,12 @@ from .serializers import UserRegistrationSerializer
 from.models import UserAccount
 import random
 from django.core.mail import send_mail
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 
 
-
+#<------------------------------------------------Registration Start------------------------------------------------------------------------------>
 otp_storage = {}
 class GenerateOTP(APIView):
     def post(self, request):
@@ -42,33 +44,6 @@ class VerifyOTP(APIView):
                 return Response({'message': 'OTP verification failed'}, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
-        
-class RoleChoicesView(APIView):
-    pass
-
-# class UserRegistrationView(APIView):
-#     def post(self, request):
-#         serializer = UserRegistrationSerializer(data=request.data)
-#         if serializer.is_valid():
-#             user = serializer.save() # Save the user to the database
-#             return Response({"message": "User registration successful."}, status=status.HTTP_201_CREATED)
-        
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-#     def get(self, request):
-#         users = UserAccount.objects.all()
-#         serializer = UserRegistrationSerializer(users, many=True)
-#         return Response(serializer.data)
-
-# class UserRegister(generics.ListCreateAPIView):
-#     queryset = UserAccount.objects.all()
-#     serializer_class = UserRegistrationSerializer
-
-
-    def get(self, request):
-        users = UserAccount.objects.all()
-        serializer = UserRegistrationSerializer(users, many=True)
-        return Response(serializer.data)
-    
 
 # class StudentListAPIView(APIView):
 #     def get(self, request):
@@ -92,4 +67,18 @@ class UserRegister(APIView):
         users = UserAccount.objects.all()
         serializer = UserRegistrationSerializer(users, many=True)
         return Response(serializer.data)
-    
+#<----------------------------------------------------Registration End ------------------------------------------>
+# <--------------------------------------------------Login Start ------------------------------------------------->
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        print(user,6666666666666666666666666)
+        token = super().get_token(user)
+        token['full_name'] = user.full_name
+        token['is_superuser'] = user.is_superuser
+        token['role']= user.role
+        token['email'] = user.email
+        token['phonenumber'] = user.phone_number
+        return token
+class MyTokenObtainPairView(TokenObtainPairView):
+    serializer_class = MyTokenObtainPairSerializer 
