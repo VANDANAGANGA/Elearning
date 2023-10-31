@@ -90,6 +90,10 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
 #     def __str__(self):
 #         return self.user.email
 
-class CourseCatergory(models.Model):
-    
-    
+class CourseCategory(models.Model):
+    title=models.CharField(max_length=100,unique=True)
+    icon_url=models.CharField(max_length=500)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+       return self.title

@@ -2,8 +2,8 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status,generics
-from .serializers import UserRegistrationSerializer
-from.models import UserAccount
+from .serializers import UserRegistrationSerializer,CourseCategorySerializer
+from.models import UserAccount,CourseCategory
 import random
 from django.core.mail import send_mail
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -82,3 +82,16 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         return token
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer 
+#<--------------------------------------------------------------------------------------------------------------------------------------------------->
+class CourseCategoryView(APIView):
+    def post(self,request):
+        serializer=CourseCategorySerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data,status=status.HTTP_201_CREATED)
+        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+    def get(self,request):
+        categories = CourseCategory.objects.all()
+        serializer=CourseCategorySerializer(categories,many=True)
+        return Response(serializer.data)
+
