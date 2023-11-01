@@ -2,12 +2,14 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status,generics
-from .serializers import UserRegistrationSerializer,CourseCategorySerializer
+from .serializers import UserRegistrationSerializer,CourseCategorySerializer,TeacherSerializer
 from.models import UserAccount,CourseCategory
 import random
 from django.core.mail import send_mail
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
+
 
 
 
@@ -82,6 +84,20 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         return token
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer 
+
+
+class MyTokenLogoutView(APIView):
+    def post(self, request):
+        refresh_token = request.data.get('refresh')
+        if not refresh_token:
+            return Response({'detail': 'Refresh token is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            return Response({'detail': 'Logout successful.'}, status=status.HTTP_205_RESET_CONTENT)
+        except Exception as e:
+            return Response({'detail': 'Invalid refresh token.'}, status=status.HTTP_400_BAD_REQUEST)    
 #<--------------------------------------------------------------------------------------------------------------------------------------------------->
 class CourseCategoryView(APIView):
     def post(self,request):
@@ -95,3 +111,45 @@ class CourseCategoryView(APIView):
         serializer=CourseCategorySerializer(categories,many=True)
         return Response(serializer.data)
 
+#<-------------------------------------------------------------------------------------------------------------------->
+class TeacherListView(APIView):
+    def get(self, request):
+        teachers = UserAccount.objects.filter(role=3)
+        serializer = TeacherSerializer(teachers, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    def put(self, request):
+        try:
+            teacher_id = request.data.get('id')
+
+            if teacher_id is not None:
+                teacher = UserAccount.objects.get(id=teacher_id)
+                # Toggle the is_active field
+                teacher.is_active = not teacher.is_active
+                teacher.save()
+                return Response({'detail': 'Teacher updated successfully.'}, status=status.HTTP_200_OK)
+            else:
+                return Response({'detail': 'Invalid request data.'}, status=status.HTTP_400_BAD_REQUEST)
+        except UserAccount.DoesNotExist:
+            return Response({'detail': 'Teacher not found.'}, status=status.HTTP_404_NOT_FOUND)
+#<------------------------------------------------------------------------------------------------------------------------>                 
+class StudentListView(APIView):
+    def get(self, request):
+        students = UserAccount.objects.filter(role=2)
+        serializer = TeacherSerializer(students, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    def put(self, request):
+        try:
+            student_id = request.data.get('id')
+
+            if student_id is not None:
+                teacher = UserAccount.objects.get(id=student_id)
+                # Toggle the is_active field
+                teacher.is_active = not teacher.is_active
+                teacher.save()
+                return Response({'detail': 'Student updated successfully.'}, status=status.HTTP_200_OK)
+            else:
+                return Response({'detail': 'Invalid request data.'}, status=status.HTTP_400_BAD_REQUEST)
+        except UserAccount.DoesNotExist:
+            return Response({'detail': 'Student not found.'}, status=status.HTTP_404_NOT_FOUND)

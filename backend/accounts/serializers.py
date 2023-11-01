@@ -59,3 +59,15 @@ class CourseCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = CourseCategory
         fields = '__all__'
+#<-------------------------------------------------------------------------------------------------------------------->
+
+class TeacherSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserAccount
+        fields = ['full_name', 'email', 'phone_number', 'profile_pic','is_active']        
+
+#<---------------------------------------------------------------------------------------------------------------------->
+class StudentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=UserAccount
+        fields=['full_name','email','phone_number','profile_pic','is_active']

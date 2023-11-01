@@ -97,3 +97,15 @@ class CourseCategory(models.Model):
 
     def __str__(self):
        return self.title
+
+class Course(models.Model):
+    title = models.CharField(max_length=200)
+    teacher = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
+    category = models.ForeignKey(CourseCategory, on_delete=models.CASCADE)
+    is_active=models.BooleanField(default=True)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    price=models.IntegerField()
+         
+    def __str__(self):
+       return self.title
