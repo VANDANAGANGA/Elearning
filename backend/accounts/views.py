@@ -2,8 +2,8 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status,generics
-from .serializers import UserRegistrationSerializer,CourseCategorySerializer,TeacherSerializer
-from.models import UserAccount,CourseCategory
+from .serializers import UserRegistrationSerializer,CourseCategorySerializer,TeacherSerializer,CourseSerializer
+from.models import UserAccount,CourseCategory,Course,TeacherProfile
 import random
 from django.core.mail import send_mail
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -22,7 +22,7 @@ class GenerateOTP(APIView):
         if email:
             if UserAccount.objects.filter(email=email).exists():
                 return Response({'error': 'User with this email already exists'}, status=status.HTTP_400_BAD_REQUEST)
-
+            
             otp = ''.join([str(random.randint(0, 9)) for _ in range(4)])
             otp_storage[email] = otp 
             # Send the OTP to the user's email
@@ -110,11 +110,11 @@ class CourseCategoryView(APIView):
         categories = CourseCategory.objects.all()
         serializer=CourseCategorySerializer(categories,many=True)
         return Response(serializer.data)
-
 #<-------------------------------------------------------------------------------------------------------------------->
 class TeacherListView(APIView):
     def get(self, request):
-        teachers = UserAccount.objects.filter(role=3)
+        teachers = TeacherProfile.objects.all()
+        print(teachers)
         serializer = TeacherSerializer(teachers, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
@@ -153,3 +153,16 @@ class StudentListView(APIView):
                 return Response({'detail': 'Invalid request data.'}, status=status.HTTP_400_BAD_REQUEST)
         except UserAccount.DoesNotExist:
             return Response({'detail': 'Student not found.'}, status=status.HTTP_404_NOT_FOUND)
+#<--------------------------------------------------------------------------------------------------------------------------------------->
+class CourseView(APIView):
+    def get(self, request):
+        courses = Course.objects.all()
+        serializer = CourseSerializer(courses, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = CourseSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)        

@@ -17,17 +17,18 @@ class UserAccountManager(BaseUserManager):
         user.save(using=self._db)
         return user
      
-    def create_superuser(self, email, password):
-        user = self.create_user(
-            email=self.normalize_email(email),
-            password=password,
-        )
-        user.is_admin = True
-        user.is_staff = True
-        user.is_superuser = True
-        user.role = 1
-        user.save(using=self._db)
-        return user
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.setdefault('is_admin', True)
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('role', 1)  # Assuming superusers have the role of 'Admin'
+
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError('Superuser must have is_staff=True.')
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError('Superuser must have is_superuser=True.')
+
+        return self.create_user(email, password=password, **extra_fields)
 class UserAccount(AbstractBaseUser, PermissionsMixin):
     ADMIN = 1
     STUDENT = 2
@@ -80,15 +81,33 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
 
     def has_module_perms(self, add_label):
         return True
+    
 
-# class TeacherProfile(models.Model):
-#     user = models.OneToOneField(UserAccount, on_delete=models.CASCADE, related_name='teacher_profile')
-#     experience = models.CharField(max_length=100, blank=True)
-#     qualification = models.CharField(max_length=100, blank=True)
-#     about = models.TextField(blank=True)
+class TeacherProfile(models.Model):
+    user = models.OneToOneField('UserAccount', on_delete=models.CASCADE, related_name='teacher_profile')
+    years_of_experience = models.PositiveIntegerField()
+    experience = models.CharField(max_length=255)
+    about = models.CharField(max_length=100)
 
-#     def __str__(self):
-#         return self.user.email
+    def __str__(self):
+        return f"{self.user.full_name}'s Teacher Profile"
+    
+
+class StudentProfile(models.Model):
+    user=models.OneToOneField('UserAccount',on_delete=models.CASCADE,related_name='student_profile')  
+    highest_education=models.CharField(max_length=100)
+    specilization=models.CharField(max_length=200,null=True)
+    mother_name=models.CharField(null=True)
+    father_name=models.CharField(null=True)
+    house_name=models.CharField()
+    street=models.CharField()
+    city=models.CharField()
+    state=models.CharField()
+    pin=models.IntegerField()
+
+    def __str__(self):
+        return f"{self.user.full_name}'s Student Profile"
+    
 
 class CourseCategory(models.Model):
     title=models.CharField(max_length=100,unique=True)
