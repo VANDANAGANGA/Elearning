@@ -1,5 +1,5 @@
 from django.contrib import admin
-from.models import UserAccount,CourseCategory,Course,TeacherProfile,StudentProfile
+from.models import UserAccount,CourseCategory,Course,TeacherProfile,StudentProfile,Module,Chapter
 from django.contrib.auth.admin import UserAdmin
 class CustomUserAdmin(UserAdmin):
     list_display = ('id', 'email', 'phone_number', 'is_active', 'role', 'is_superuser')
@@ -21,3 +21,5 @@ admin.site.register(CourseCategory)
 admin.site.register(Course)
 admin.site.register(TeacherProfile)
 admin.site.register(StudentProfile)
+admin.site.register(Module)
+admin.site.register(Chapter)

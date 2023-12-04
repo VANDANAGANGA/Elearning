@@ -3,6 +3,8 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from phonenumber_field.modelfields import PhoneNumberField
 
 # Create your models here.
+def upload_to(instance, filename):
+    return f'profile_pics/{filename}'
 
 class UserAccountManager(BaseUserManager):
     def create_user(self, email, full_name, phone_number, password=None, **extra_fields):
@@ -43,7 +45,7 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(max_length=50, unique=True)
     phone_number = models.CharField(null=True, blank=True)
     full_name = models.CharField(max_length=200)
-    profile_pic = models.ImageField(upload_to='user/', null=True, blank=True, default='user/user.png')
+    profile_pic = models.ImageField(upload_to=upload_to, null=True, blank=True)
     date_joined = models.DateTimeField(auto_now_add=True)
     last_login = models.DateTimeField(auto_now=True)
     role = models.PositiveSmallIntegerField(choices=ROLE_CHOICES, blank=True, null=True, default=2)
@@ -86,27 +88,28 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
 class TeacherProfile(models.Model):
     user = models.OneToOneField('UserAccount', on_delete=models.CASCADE, related_name='teacher_profile')
     years_of_experience = models.PositiveIntegerField()
-    experience = models.CharField(max_length=255)
-    about = models.CharField(max_length=100)
+    job_role=models.CharField()
+    company_name = models.CharField(max_length=255)
+    about = models.CharField(max_length=500)
 
     def __str__(self):
-        return f"{self.user.full_name}'s Teacher Profile"
-    
+           return f"{str(self.user.full_name)}'s Teacher Profile"
 
 class StudentProfile(models.Model):
     user=models.OneToOneField('UserAccount',on_delete=models.CASCADE,related_name='student_profile')  
     highest_education=models.CharField(max_length=100)
-    specilization=models.CharField(max_length=200,null=True)
+    specialization=models.CharField(max_length=200,null=True)
     mother_name=models.CharField(null=True)
     father_name=models.CharField(null=True)
     house_name=models.CharField()
     street=models.CharField()
     city=models.CharField()
     state=models.CharField()
-    pin=models.IntegerField()
+    country=models.CharField()
+    pin=models.CharField()
 
     def __str__(self):
-        return f"{self.user.full_name}'s Student Profile"
+        return f"{self.user.full_name}'s Student Profile",self.id
     
 
 class CourseCategory(models.Model):
@@ -119,12 +122,29 @@ class CourseCategory(models.Model):
 
 class Course(models.Model):
     title = models.CharField(max_length=200)
-    teacher = models.ForeignKey(UserAccount, on_delete=models.CASCADE)
+    teacher = models.ForeignKey(TeacherProfile, on_delete=models.CASCADE)
     category = models.ForeignKey(CourseCategory, on_delete=models.CASCADE)
     is_active=models.BooleanField(default=True)
     start_date = models.DateField()
     end_date = models.DateField()
     price=models.IntegerField()
+    about=models.TextField(max_length=1000)
          
     def __str__(self):
        return self.title
+    
+class Module(models.Model):
+    module_no= models.IntegerField()
+    course =models.ForeignKey(Course,on_delete=models.CASCADE)
+    module_title=models.CharField()    
+
+    def __str__(self):
+       return self.title
+    
+
+class Chapter(models.Model):
+    chapter_no=models.IntegerField()
+    module=models.ForeignKey(Module,on_delete=models.CASCADE)
+    chapter_title=models.CharField()
+    video=models.FileField(upload_to='videos/')
+        
