@@ -7,7 +7,7 @@ from django.contrib.auth import get_user_model
 # from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from phonenumber_field.serializerfields import PhoneNumberField
-from.models import UserAccount,CourseCategory,Course,TeacherProfile,StudentProfile,Module,Chapter
+from.models import UserAccount,CourseCategory,Course,TeacherProfile,StudentProfile,Module,Chapter,Assignment,Quiz,Questions,Order,StudentCourse,StudentAssignment,StudentQuiz,Masterclass,Shedule,Room,Message
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 
@@ -31,12 +31,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     state = serializers.CharField(required=False)
     country = serializers.CharField(required=False)
     pin = serializers.CharField(required=False)
-
-
-
-
-
-
     class Meta:
         model = User
         fields = ['email','password', 'password2','full_name','phone_number','role','profile_pic','about','years_of_experience','company_name','about','job_role','highest_education','specialization','mother_name','father_name','house_name','street','city','state','country','pin']
@@ -138,12 +132,13 @@ class CourseSerializer(serializers.ModelSerializer):
      class Meta:
         model = Course
         fields = '__all__'
+
 #<------------------------------------------------------------------------------------------------------------->
 class TeacherCourseSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.title', read_only=True)
     class Meta:
         model=Course
-        fields=['id','title','is_active','start_date','end_date','about','price','category_name']
+        fields=['id','title','is_active','created_at','about','category_name']
 #<-------------------------------------------------------------------------------------------------------------->
 class ModuleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -152,5 +147,91 @@ class ModuleSerializer(serializers.ModelSerializer):
 #<---------------------------------------------------------------------------------------------------------------->
 class ChapterSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Chapter  # Correct the attribute name here
+        model = Chapter  
         fields = '__all__'
+#<------------------------------------------------------------------------------------------------------------------>
+class AssignmentSerializer(serializers.ModelSerializer):
+     class Meta:
+        model = Assignment  
+        fields = '__all__'
+#<------------------------------------------------------------------------------------------------------------------>
+class QuizSerializer(serializers.ModelSerializer):
+     class Meta:
+        model = Quiz  
+        fields = '__all__'        
+#<----------------------------------------------------------------------------------------------------------------->
+class QuestionSerializer(serializers.ModelSerializer):
+     class Meta:
+        model = Questions 
+        fields = '__all__'   
+#<------------------------------------------------------------------------------------------------------------------>           
+class OrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Order
+        fields = '__all__'
+#<----------------------------------------------------------------------------------------------------------------->
+class MasterclassSerializer(serializers.ModelSerializer):
+     class Meta:
+        model = Masterclass
+        fields = '__all__'   
+class SheduleSerializer(serializers.ModelSerializer):
+     class Meta:
+        model = Shedule
+        fields = '__all__'           
+#<---------------------------------------------------------------------------------------------------------------------->        
+class StudentCourseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StudentCourse
+        fields = '__all__'                
+#<-------------------------------------------------------------------------------------------------------------------->                       
+class StudentAssignmentSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(source='student.user.full_name', read_only=True)
+    profile_pic=serializers.ImageField(source='student.user.profile_pic')
+
+    class Meta:
+        model = StudentAssignment
+        fields = ['full_name','profile_pic','submitted_at','answer','verified']
+#<---------------------------------------------------------------------------------------------------------------------------------->
+class StudentQuizSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(source='student.user.full_name', read_only=True)
+    profile_pic=serializers.ImageField(source='student.user.profile_pic')
+
+    class Meta:
+        model = StudentQuiz
+        fields = ['full_name','profile_pic','submitted_at','mark']
+        
+class StudentQuizsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StudentQuiz
+        fields = ['student', 'quiz', 'submitted_at', 'mark', 'response']
+        
+                 
+                                               
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserAccount
+        exclude = ["password"]
+                 
+  
+class MessageSerializer(serializers.ModelSerializer):
+    created_at_formatted = serializers.SerializerMethodField()
+    user = UserSerializer()
+
+    class Meta:
+        model = Message
+        exclude = []
+        depth = 1
+
+    def get_created_at_formatted(self, obj:Message):
+        return obj.created_at.strftime("%d-%m-%Y %H:%M:%S")
+
+class RoomSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = Room
+        fields = '__all__'
+
+class StudentProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StudentProfile
+        fields = '__all__'    

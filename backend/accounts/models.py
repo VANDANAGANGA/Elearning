@@ -1,6 +1,10 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin, Group, Permission
 from phonenumber_field.modelfields import PhoneNumberField
+from django.utils import timezone
+from django.db.models import Manager
+
+
 
 # Create your models here.
 def upload_to(instance, filename):
@@ -91,6 +95,7 @@ class TeacherProfile(models.Model):
     job_role=models.CharField()
     company_name = models.CharField(max_length=255)
     about = models.CharField(max_length=500)
+    account = models.DecimalField(default=0.0, max_digits=10, decimal_places=2)
 
     def __str__(self):
            return f"{str(self.user.full_name)}'s Teacher Profile"
@@ -125,13 +130,10 @@ class Course(models.Model):
     teacher = models.ForeignKey(TeacherProfile, on_delete=models.CASCADE)
     category = models.ForeignKey(CourseCategory, on_delete=models.CASCADE)
     is_active=models.BooleanField(default=True)
-    start_date = models.DateField()
-    end_date = models.DateField()
-    price=models.IntegerField()
+    created_at = models.DateField(auto_now=True)
     about=models.TextField(max_length=1000)
+
          
-    def __str__(self):
-       return self.title
     
 class Module(models.Model):
     module_no= models.IntegerField()
@@ -139,7 +141,7 @@ class Module(models.Model):
     module_title=models.CharField()    
 
     def __str__(self):
-       return self.title
+        return self.module_title
     
 
 class Chapter(models.Model):
@@ -147,4 +149,129 @@ class Chapter(models.Model):
     module=models.ForeignKey(Module,on_delete=models.CASCADE)
     chapter_title=models.CharField()
     video=models.FileField(upload_to='videos/')
+    
+    def __str__(self):
+       return self.chapter_title
         
+class Assignment(models.Model):
+    course=models.ForeignKey(Course,on_delete=models.CASCADE)  
+    assignment_no=models.IntegerField()
+    assignment_title=models.CharField()
+    pdf=models.FileField(upload_to='assignments/')
+    
+    
+   
+class Quiz(models.Model):
+    course=models.ForeignKey(Course,on_delete=models.CASCADE)  
+    quiz_no=models.IntegerField()
+    quiz_title=models.CharField()
+
+    
+class Questions(models.Model):
+    ANSWER_CHOICES = [
+        ('A', 'option_a'),
+        ('B', 'option_b'),
+        ('C', 'option_c'),
+        ('D', 'option_d'),
+    ]
+
+    quiz=models.ForeignKey(Quiz,on_delete=models.CASCADE)
+    question_no=models.IntegerField()
+    question=models.CharField()
+    option_a=models.CharField()
+    option_b=models.CharField()
+    option_c=models.CharField()
+    option_d=models.CharField()
+    answer = models.CharField(max_length=1, choices=ANSWER_CHOICES)
+
+    def __str__(self):
+        return f"Question {self.question_no} - {self.question} ({self.quiz})"
+
+class Masterclass(models.Model):    
+    title = models.CharField(max_length=200)
+    teacher = models.ForeignKey(TeacherProfile, on_delete=models.CASCADE)
+    category = models.ForeignKey(CourseCategory, on_delete=models.CASCADE)
+    is_active=models.BooleanField(default=True)
+    start_date = models.DateField()
+    time=models.TimeField()
+    about=models.TextField(max_length=1000)
+
+
+    def update_is_active_status(self):
+        current_datetime = timezone.now()
+        if current_datetime > timezone.datetime.combine(self.start_date, self.time):
+            self.is_active = False
+            self.save()   
+
+
+
+class Shedule(models.Model):    
+    title = models.CharField(max_length=200)
+    teacher = models.ForeignKey(TeacherProfile, on_delete=models.CASCADE)
+    is_active = models.BooleanField(default=True)
+    date = models.DateField()
+    about = models.TextField(max_length=1000)
+    completed = models.BooleanField(default=False)
+    
+
+class Order(models.Model):
+    student=models.ForeignKey(StudentProfile,on_delete=models.CASCADE)
+    order_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    order_payment_id = models.CharField(max_length=100)
+    is_active = models.BooleanField(default=False)
+    order_date = models.DateTimeField(auto_now=True)
+    months = models.IntegerField(default=0)
+
+  
+    def isValid(self):
+        now = timezone.now()
+        active_duration = now - self.order_date
+        months_active = active_duration.days // 30  # Assuming a month has 30 days
+
+        if months_active >= self.months:
+            self.isPaid = True
+        else:
+            self.isPaid = False
+
+        self.save()
+        return self.isPaid
+    
+class StudentCourse(models.Model):
+    student=models.ForeignKey(StudentProfile,on_delete=models.CASCADE)
+    course=models.ForeignKey(Course,on_delete=models.CASCADE)
+    enrolled_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Order {self.id} - Amount: {self.student}, Student: {self.course},"
+
+class StudentAssignment(models.Model):
+    student=models.ForeignKey(StudentProfile,on_delete=models.CASCADE)
+    assignment=models.ForeignKey(Assignment,on_delete=models.CASCADE)
+    submitted_at = models.DateTimeField(auto_now=True)
+    answer=models.FileField(upload_to='studentassignments/')
+    verified=models.BooleanField(default=False)
+
+class StudentQuiz(models.Model):
+    student=models.ForeignKey(StudentProfile,on_delete=models.CASCADE)
+    quiz=models.ForeignKey(Quiz,on_delete=models.CASCADE)
+    submitted_at = models.DateTimeField(auto_now=True)
+    mark=models.IntegerField()
+    response=models.FileField(upload_to='studentquiz/')
+
+
+class Room(models.Model):
+    course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    teacher = models.ForeignKey(TeacherProfile, on_delete=models.CASCADE, related_name="taught_classes")
+    students = models.ManyToManyField(StudentProfile, related_name="enrolled_classes", blank=True)
+
+    def __str__(self):
+        return f"Room({self.id})"
+    
+class Message(models.Model):
+    room = models.ForeignKey("accounts.Room", on_delete=models.CASCADE, related_name="messages")
+    text = models.TextField(max_length=500)
+    user = models.ForeignKey(UserAccount, on_delete=models.CASCADE, related_name="messages")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Message({self.user} {self.room})"    

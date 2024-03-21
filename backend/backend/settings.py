@@ -41,8 +41,11 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'rest_framework_simplejwt',
-    'accounts'
+    'accounts',
+    'channels'
 ]
+
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -183,3 +186,26 @@ EMAIL_PORT = 587  # Replace with the appropriate port (e.g., 587 for TLS, 465 fo
 EMAIL_USE_TLS = True  # Use TLS (or False if using SSL)
 EMAIL_HOST_USER = 'vandu.ganga96@gmail.com'
 EMAIL_HOST_PASSWORD = 'tekl jhxe xjwy hdor'
+
+
+
+RAZORPAY_KEY_ID='rzp_test_AZRz71dY2SuShj'
+RAZORPAY_KEY_SECRET='r337M5JbaEQLABz0sbY9lqMU'
+ASGI_APPLICATION = 'accounts.routing.application'
+# routing.py
+
+ASGI_APPLICATION = "backend.routing.application" #routing.py will handle the ASGI
+# CHANNEL_LAYERS = {
+#     'default': {
+#         'BACKEND': "channels.layers.InMemoryChannelLayer"
+#         }
+#     }
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+        },
+    },
+}
