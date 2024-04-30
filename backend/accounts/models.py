@@ -243,6 +243,13 @@ class StudentCourse(models.Model):
 
     def __str__(self):
         return f"Order {self.id} - Amount: {self.student}, Student: {self.course},"
+    
+    
+class StudentChapter(models.Model):
+    student=models.ForeignKey(StudentProfile,on_delete=models.CASCADE)
+    chapter=models.ForeignKey(Chapter,on_delete=models.CASCADE)
+    is_completed = models.BooleanField(default=True)    
+    
 
 class StudentAssignment(models.Model):
     student=models.ForeignKey(StudentProfile,on_delete=models.CASCADE)
@@ -258,6 +265,11 @@ class StudentQuiz(models.Model):
     mark=models.IntegerField()
     response=models.FileField(upload_to='studentquiz/')
 
+class StudentCertificate(models.Model):
+    student=models.ForeignKey(StudentProfile,on_delete=models.CASCADE)
+    teacher=models.CharField()
+    course=models.CharField()
+    date=models.DateField(auto_now=True)
 
 class Room(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
@@ -275,3 +287,6 @@ class Message(models.Model):
 
     def __str__(self):
         return f"Message({self.user} {self.room})"    
+    
+
+    

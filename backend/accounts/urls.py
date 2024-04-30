@@ -8,7 +8,13 @@ urlpatterns = [
 
     path('login/',views.MyTokenObtainPairView.as_view()),
     path('logout/',views.MyTokenLogoutView.as_view()),
+    path('courses/',views.CourseView.as_view(),name='courses'),
     path('coursedetailsmain/',views.CourseDetailsAPIView.as_view()),
+    path('team/',views.TeamListView.as_view(),name='teamlistview'),
+    path('about/',views.AboutView.as_view(),name='aboutview'),
+    path('contact/',views.ContactFormView.as_view(),name='contactformview'),
+    path('profilepic/',views.ProfilePic.as_view(),name='profilepic'),
+    
   
   
     path('coursecategory/',views.CourseCategoryView.as_view(),name='coursecategory'),
@@ -20,8 +26,10 @@ urlpatterns = [
 
 
 
-    path('courses/',views.CourseView.as_view(),name='courses'),
+  
      path('roomid/',views.RoomId.as_view(),name='roomid'),
+     path('messages/',views.MessageView.as_view(),name='message'),
+
 
 
     path('teachercourses/',views.TeacherCourse.as_view(),name='teachercourses'),
@@ -44,8 +52,16 @@ urlpatterns = [
     path('studentcoursedetails/',views.StudentCourseDetails.as_view(),name='studentcoursedetails'),
     path('studentmodule/',views.StudentModule.as_view(),name='studentmodule'),
     path('studentassignment/',views.StudentAssignemntApiView.as_view(),name='studentassignment'),
-    path('studentquiz/',views.StudentQuiz.as_view(),name='studentquiz'),
+    path('studentquiz/',views.StudentQuizApiView.as_view(),name='studentquiz'),
     path('studentprofile/',views.StudentProfileView.as_view(),name='studentprofile'),
+    path('studentchapter/',views.StudentChapterView.as_view(),name='studentchapter'),
+    path('coursecompletion/',views.CompletionPercentageAPIView.as_view(),name='coursecompletion'),
+     path('coursecertificate/',views.StudentCertificateView.as_view(),name='studentcertificate'),
+
+
+
+
+ 
 
  
 

@@ -1,13 +1,13 @@
 # tasks.py
 from celery import shared_task
 from datetime import datetime, timedelta
-from .models import Schedule,Order
+from .models import Shedule,Order
 from django.utils import timezone
 
 @shared_task
 def deactivate_old_schedules():
     yesterday = datetime.now() - timedelta(days=1)
-    old_schedules = Schedule.objects.filter(date__lt=yesterday)
+    old_schedules = Shedule.objects.filter(date__lt=yesterday)
     old_schedules.update(is_active=False)
 
 @shared_task

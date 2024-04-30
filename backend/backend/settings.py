@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 import os
 from pathlib import Path
+from celery import Celery
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -31,6 +33,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -42,7 +45,9 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework_simplejwt',
     'accounts',
-    'channels'
+    'django_celery_beat',
+    'django_celery_results',
+    
 ]
 
 
@@ -191,21 +196,23 @@ EMAIL_HOST_PASSWORD = 'tekl jhxe xjwy hdor'
 
 RAZORPAY_KEY_ID='rzp_test_AZRz71dY2SuShj'
 RAZORPAY_KEY_SECRET='r337M5JbaEQLABz0sbY9lqMU'
-ASGI_APPLICATION = 'accounts.routing.application'
-# routing.py
 
-ASGI_APPLICATION = "backend.routing.application" #routing.py will handle the ASGI
-# CHANNEL_LAYERS = {
-#     'default': {
-#         'BACKEND': "channels.layers.InMemoryChannelLayer"
-#         }
-#     }
+
+ASGI_APPLICATION = "backend.asgi.application" 
 
 CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            "hosts": [('127.0.0.1', 6379)],
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("localhost", 6379)],
         },
     },
 }
+
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+
+app = Celery('backend')
+
+CELERY_BROKER_URL = "redis://localhost:6379"
+CELERY_RESULT_BACKEND = "redis://localhost:6379"

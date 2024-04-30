@@ -2,9 +2,10 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status,generics
-from .serializers import UserRegistrationSerializer,CourseCategorySerializer,TeacherSerializer,CourseSerializer,StudentSerializer,TeacherCourseSerializer,ModuleSerializer,ChapterSerializer,AssignmentSerializer,QuizSerializer,QuestionSerializer,OrderSerializer,StudentCourseSerializer,StudentAssignmentSerializer,StudentQuizSerializer,MasterclassSerializer,SheduleSerializer,RoomSerializer,MessageSerializer,StudentQuizsSerializer
-from.models import UserAccount,CourseCategory,Course,TeacherProfile,StudentProfile,Module,Chapter,Assignment,Quiz,Questions,Order,StudentCourse,StudentAssignment,StudentQuiz,Masterclass,Shedule,Room,Message
+from .serializers import UserRegistrationSerializer,CourseCategorySerializer,TeacherSerializer,CourseSerializer,StudentSerializer,TeacherCourseSerializer,ModuleSerializer,ChapterSerializer,AssignmentSerializer,QuizSerializer,QuestionSerializer,OrderSerializer,StudentCourseSerializer,StudentAssignmentSerializer,StudentQuizSerializer,MasterclassSerializer,SheduleSerializer,RoomSerializer,MessageSerializer,StudentQuizsSerializer,StudentChapterSerializer,StudentCertificateSerializer
+from.models import UserAccount,CourseCategory,Course,TeacherProfile,StudentProfile,Module,Chapter,Assignment,Quiz,Questions,Order,StudentCourse,StudentAssignment,StudentQuiz,Masterclass,Shedule,Room,Message,StudentChapter,StudentCertificate
 import random
+from .serializers import TeacherProfileSerializer,UserSerializer,StudentProfileSerializer,ProfilePicSerializer
 from django.core.mail import send_mail
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -14,6 +15,10 @@ import razorpay
 from backend.settings import RAZORPAY_KEY_ID,RAZORPAY_KEY_SECRET
 import base64
 from django.db.models import Sum,Count
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.permissions import IsAuthenticated
+
+
 
 
 
@@ -88,6 +93,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['phonenumber'] = user.phone_number
 
 
+
         if user.role == 3:
             try:
                 teacher_profile = TeacherProfile.objects.get(user=user)
@@ -121,6 +127,18 @@ class MyTokenLogoutView(APIView):
         except Exception as e:
             return Response({'detail': 'Invalid refresh token.'}, status=status.HTTP_400_BAD_REQUEST)    
 #<--------------------------------------------------------------------------------------------------------------------------------------------------->
+class ProfilePic(APIView):
+    def get(self, request):
+        try:
+            id = request.query_params.get('id')
+            user = UserAccount.objects.get(id=id)
+            serializer = ProfilePicSerializer(user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except UserAccount.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+#<------------------------------------------------------------------------------------------------------------------------------------------------------------>        
 class CourseCategoryView(APIView):
     def post(self,request):
         serializer=CourseCategorySerializer(data=request.data)
@@ -148,7 +166,57 @@ class CourseCategoryView(APIView):
         category.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 #<-------------------------------------------------------------------------------------------------------------------->
+class CourseView(APIView):
+    @staticmethod
+    def get_category_name(category_id):
+        try:
+            category = CourseCategory.objects.get(id=category_id)
+            return category.icon_url
+        except CourseCategory.DoesNotExist:
+            return None
 
+    @staticmethod
+    def get_teacher_name(teacher_id):
+        try:
+            teacher = TeacherProfile.objects.get(id=teacher_id)
+            return teacher.user.full_name
+        except TeacherProfile.DoesNotExist:
+            return None
+    def get(self, request):
+        courses = Course.objects.filter(is_active=True)
+        course_data = []
+
+        for course in courses:
+            serialized_course = CourseSerializer(course).data
+            category_icon = self.get_category_name(course.category.id)
+            teacher_name = self.get_teacher_name(course.teacher.id)
+            print(8888888888888888888888888888888888888888)
+            serialized_course['category'] = category_icon
+            serialized_course['teacher'] = teacher_name
+
+            course_data.append(serialized_course)
+            
+        return Response(course_data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = CourseSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()   
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        print(serializer.errors)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)      
+    def delete(self,request,*arg, **kwargs):
+        try:
+            course_id = request.query_params.get('id')
+            if course_id is not None:
+                module=Course.objects.get(id=course_id)
+                module.delete()
+                return Response({"message": "Course deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+            else:
+                return Response({"error": "Course ID not provided in query parameters"}, status=status.HTTP_400_BAD_REQUEST)
+        except Course.DoesNotExist:
+            return Response({"error": "Course not found"}, status=status.HTTP_404_NOT_FOUND)    
+#<------------------------------------------------------------------------------------------------------------------------------->
 class CourseDetailsAPIView(APIView):
     def get(self,request):
         try:
@@ -159,7 +227,10 @@ class CourseDetailsAPIView(APIView):
             return Response({'error': 'Course not found'}, status=status.HTTP_404_NOT_FOUND)
         
         course_serializer = CourseSerializer(course)
+        teacher_serializer = TeacherSerializer(course.teacher)
         modules = Module.objects.filter(course=course)
+        assignments = Assignment.objects.filter(course=course)
+        quizzes = Quiz.objects.filter(course=course)
         module_data = []
 
         for module in modules:
@@ -172,11 +243,53 @@ class CourseDetailsAPIView(APIView):
             })
             response_data = {
             'course': course_serializer.data,
-            'modules': module_data
+            'teacher':teacher_serializer.data,
+            'modules': module_data,
+            'num_assignments': assignments.count(),
+            'num_quizzes': quizzes.count(),
         }
 
         return Response(response_data, status=status.HTTP_200_OK)
-
+#<------------------------------------------------------------------------------------------------------------------------------> 
+class TeamListView(APIView):
+    def get(self,request):
+        team= TeacherProfile.objects.filter(user__is_active=True)
+        team_serializer = TeacherSerializer(team,many=True)
+        return Response(team_serializer.data, status=status.HTTP_200_OK)
+#<---------------------------------------------------------------------------------------------------------------------------------------->
+class AboutView(APIView):
+     def get(self,request):      
+        total_teachers = UserAccount.objects.filter(role=UserAccount.TEACHER).count()
+        total_students = UserAccount.objects.filter(role=UserAccount.STUDENT).count()
+        total_courses=Course.objects.all().count()
+        print(77777777777777777777777777777777777777777777777777777777777)
+        return Response({
+                'total_teachers': total_teachers,
+                'total_students': total_students,
+                'total_course': total_courses,
+                
+            })
+#<----------------------------------------------------------------------------------------------------------->
+class ContactFormView(APIView):
+    def post(self, request):
+        name = request.data.get('name')
+        email = request.data.get('email')
+        subject = request.data.get('subject')
+        message = request.data.get('message')
+      
+        try:
+            send_mail(
+                subject,
+                f"Name: {name}\nEmail: {email}\n\nMessage: {message}",
+                'vandu.ganga96@gmail.com',
+                ['vandu.ganga96@gmail.com'],
+                fail_silently=False,
+            )
+            return Response({'message': 'Email sent successfully'}, status=200)
+        except Exception as e:
+            return Response({'error': str(e)}, status=400)    
+#<------------------------------------------------------------------------------------------------------------------------------------>
+                                              # Admin View
 #<---------------------------------------------------------------------------------------------------------------------------->
 class TeacherListView(APIView):
     def get(self, request):
@@ -386,56 +499,7 @@ class SalesReport(APIView):
         return Response(sales_data)
 #<--------------------------------------------------------------------------------------------------------------------------------------->
 #<-------------------------------------------------------------------------------------------------------------------------------------------->       
-class CourseView(APIView):
-    @staticmethod
-    def get_category_name(category_id):
-        try:
-            category = CourseCategory.objects.get(id=category_id)
-            return category.icon_url
-        except CourseCategory.DoesNotExist:
-            return None
 
-    @staticmethod
-    def get_teacher_name(teacher_id):
-        try:
-            teacher = TeacherProfile.objects.get(id=teacher_id)
-            return teacher.user.full_name
-        except TeacherProfile.DoesNotExist:
-            return None
-    def get(self, request):
-        courses = Course.objects.all()
-        course_data = []
-
-        for course in courses:
-            serialized_course = CourseSerializer(course).data
-            category_icon = self.get_category_name(course.category.id)
-            teacher_name = self.get_teacher_name(course.teacher.id)
-
-            serialized_course['category'] = category_icon
-            serialized_course['teacher'] = teacher_name
-
-            course_data.append(serialized_course)
-
-        return Response(course_data, status=status.HTTP_200_OK)
-
-    def post(self, request):
-        serializer = CourseSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()   
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        print(serializer.errors)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)      
-    def delete(self,request,*arg, **kwargs):
-        try:
-            course_id = request.query_params.get('id')
-            if course_id is not None:
-                module=Course.objects.get(id=course_id)
-                module.delete()
-                return Response({"message": "Course deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
-            else:
-                return Response({"error": "Course ID not provided in query parameters"}, status=status.HTTP_400_BAD_REQUEST)
-        except Course.DoesNotExist:
-            return Response({"error": "Course not found"}, status=status.HTTP_404_NOT_FOUND)
               
 #<----------------------------------------------------------------------------------------------------------->
                  # Teacher Views
@@ -633,7 +697,7 @@ class TeacherQuiz(APIView):
             if quiz_id is not None:
                 quiz=Quiz.objects.get(id=quiz_id)
                 quiz.delete()
-                return Response({"message": "Qiuz deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+                return Response({"message": "Quiz deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
             else:
                 return Response({"error": "Quiz ID not provided in query parameters"}, status=status.HTTP_400_BAD_REQUEST)
         except Course.DoesNotExist:
@@ -657,6 +721,17 @@ class TeacherQuestions(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         print(serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def delete(self,request,*arg, **kwargs):
+        try:
+            question_id = request.query_params.get('id')
+            if question_id is not None:
+                question=Questions.objects.get(id=question_id)
+                question.delete()
+                return Response({"message": "Question deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+            else:
+                return Response({"error": "Question ID not provided in query parameters"}, status=status.HTTP_400_BAD_REQUEST)
+        except Course.DoesNotExist:
+            return Response({"error": "Question not found"}, status=status.HTTP_404_NOT_FOUND)
 #<---------------------------------------------------------------------------------------------------------------------->
 class TeacherAllAssignment(generics.ListAPIView):
     def get(self,request):
@@ -735,6 +810,7 @@ class TeacherAllQuiz(generics.ListAPIView):
         return Response({'error': 'Course ID not provided'}, status=status.HTTP_400_BAD_REQUEST)
 #<---------------------------------------------------------------------------------------------------------------------->    
 class TeacherProfileView(APIView):
+    parser_classes = (MultiPartParser, FormParser)
     def get(self, request):
         teacher_id = request.query_params.get('teacher_id')
         if teacher_id is not None:
@@ -744,7 +820,29 @@ class TeacherProfileView(APIView):
                 return Response(serializer.data, status=status.HTTP_200_OK)
             except TeacherProfile.DoesNotExist:
                 return Response({'error': 'Teacher not found'}, status=status.HTTP_404_NOT_FOUND)
-        return Response({'error': 'Invalid request'}, status=status.HTTP_400_BAD_REQUEST)        
+        return Response({'error': 'Invalid request'}, status=status.HTTP_400_BAD_REQUEST) 
+    def put(self, request):
+        teacher_id = request.data.get('teacher_id')
+        user_id = request.data.get('user_id')
+        print(request.data)
+        try:
+            user=UserAccount.objects.get(id=user_id)
+            teacher = TeacherProfile.objects.get(id=teacher_id)
+        except TeacherProfile.DoesNotExist:
+            return Response({'error': 'Teacher not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        user_serializer = UserSerializer(user, data=request.data)
+        if user_serializer.is_valid():
+            user_serializer.save()
+        serializer = TeacherProfileSerializer(teacher, data=request.data, partial=True)
+        print(8888888888888888888888888888888888888888888888)
+        if serializer.is_valid():
+            print(888888888888888888888888888888888)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        print(serializer.errors)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 #<----------------------------------------------------------------------------------------------------------------->
 class SheduleApiView(APIView):    
     def get(self,request):
@@ -849,13 +947,15 @@ class CheckPayment(APIView):
     def get(self, request):
         try:
             student_id = request.query_params.get('id')
-            print(student_id, 888888888888888888888888)  # This print statement might not be necessary for production
+            print(student_id, 888888888888888888888888) 
             if student_id is not None:
                 valid_order_exists = Order.objects.filter(student=student_id, is_active=True).exists()
+                print(999999999999999999999999999999999999999999999999999999999999999)
                 if valid_order_exists:
-                    return Response({"message": "Valid course exists for the student."}, status=status.HTTP_200_OK)
+                    return Response({"message": "Valid Plan exists for the student."}, status=status.HTTP_200_OK)
                 else:
-                    return Response({"message": "No valid course exists for the student."}, status=status.HTTP_404_NOT_FOUND)
+                    print(444444444444444444444444444444444444444444444)
+                    return Response({"message": "No valid Plan exists for the student."}, status=200)
             else:
                 return Response({"message": "Student ID is missing in query parameters."}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
@@ -867,21 +967,24 @@ class StudentCourseApiView(APIView):
         serializer = StudentCourseSerializer(data=request.data)
         print(7777777777777777777777777777777777777777777777777)
         if serializer.is_valid():
-            student_id = serializer.validated_data.get('student')
-            course_id = serializer.validated_data.get('course')
+            course_id = request.data.get('course')
+            student_id = request.data.get('student')
+            print(course_id,student_id)
             try:
                 course = Course.objects.get(id=course_id)
                 teacher = course.teacher
+                room = Room.objects.get(course=course)
+                
             except Course.DoesNotExist:
-                return Response({"message": "Course does not exist."}, status=status.HTTP_404_NOT_FOUND)
-            
+                return Response({"message": "Course does not exist."}, status=status.HTTP_404_NOT_FOUND)    
             if StudentCourse.objects.filter(student=student_id, course=course_id).exists():
-                print(999999999999999999999999999999999999999999999999)
                 return Response({"message": "Student has already bought this course."},  status=200)
-            teacher.account += 1000
-            teacher.save()
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                room.students.add(student_id)
+                teacher.account += 1000
+                teacher.save()
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
         print(serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)   
     def get(self, request):
@@ -904,7 +1007,6 @@ class StudentCourseApiView(APIView):
                         'category_title': course_details.category.title if course_details.category else None,
                         'category_icon': course_details.category.icon_url if course_details.category else None,
                         'is_active': course_details.is_active,
-                        'price': course_details.price,
                         'about': course_details.about,
                     })
                 return Response(courses_data, status=status.HTTP_200_OK)
@@ -1003,30 +1105,39 @@ class StudentAssignemntApiView(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)    
 #<--------------------------------------------------------------------------------------------------------------------->
-class StudentQuiz(APIView):
+class StudentQuizApiView(APIView):
     parser_classes = (MultiPartParser, FormParser)
-    def get(self,request):
+    
+    def get(self, request):
         try:
             course_id = request.query_params.get('id')
             student_id = request.query_params.get('student_id')
             print(course_id,77777777777777777777777777777777777)
             if course_id is not None:
                 quiz = Quiz.objects.filter(course=course_id)
-                student=StudentProfile.objects.get(id=student_id)
+                student = StudentProfile.objects.get(id=student_id)
                 print(quiz)
                 
                 quiz_data = []
-                for quiz in quiz:
-                    quiz_serializer = QuizSerializer(quiz)
-                    quiz_questions = Questions.objects.filter(quiz=quiz)
+                for quiz_item in quiz:
+                    quiz_serializer = QuizSerializer(quiz_item)
+                    quiz_questions = Questions.objects.filter(quiz=quiz_item)
                     question_serializer = QuestionSerializer(quiz_questions, many=True)
+                    student_quiz = StudentQuiz.objects.filter(student=student_id, quiz=quiz_item).first()
+                    
+                    # Serialize each instance of StudentQuiz individually
+                    student_quiz_serializer = StudentQuizsSerializer(student_quiz)
+                    
                     quiz_data.append({
                         'quiz': quiz_serializer.data,
                         'questions': question_serializer.data,
+                        'student': student_quiz_serializer.data  # Use .data to get serialized data
                     })
-                return Response(quiz_data,status=status.HTTP_200_OK)
+                    
+                return Response(quiz_data, status=status.HTTP_200_OK)
         except Quiz.DoesNotExist:
-            return Response({'error': 'Quiz  not found'}, status=status.HTTP_404_NOT_FOUND)  
+            return Response({'error': 'Quiz not found'}, status=status.HTTP_404_NOT_FOUND)
+
     def post(self, request):
         print(request.data,88888888888888888888888888888)
         serializer = StudentQuizsSerializer(data=request.data)
@@ -1037,6 +1148,7 @@ class StudentQuiz(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)    
 #<------------------------------------------------------------------------------------------------------------------->
 class StudentProfileView(APIView):
+    parser_classes = (MultiPartParser, FormParser)
     def get(self, request):
         student_id = request.query_params.get('student_id')
         if student_id is not None:
@@ -1047,6 +1159,27 @@ class StudentProfileView(APIView):
             except StudentProfile.DoesNotExist:
                 return Response({'error': 'Student not found'}, status=status.HTTP_404_NOT_FOUND)
         return Response({'error': 'Invalid request'}, status=status.HTTP_400_BAD_REQUEST)
+    def put(self, request):
+        student_id = request.data.get('student_id')
+        user_id = request.data.get('user_id')
+        print(request.data)
+        try:
+            user=UserAccount.objects.get(id=user_id)
+            teacher = StudentProfile.objects.get(id=student_id)
+        except StudentProfile.DoesNotExist:
+            return Response({'error': 'Student not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        user_serializer = UserSerializer(user, data=request.data)
+        if user_serializer.is_valid():
+            user_serializer.save()
+        serializer = StudentProfileSerializer(teacher, data=request.data, partial=True)
+        print(8888888888888888888888888888888888888888888888)
+        if serializer.is_valid():
+            print(888888888888888888888888888888888)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        print(serializer.errors)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 #<-------------------------------------------------------------------------------------------------------------------------------------------------------------->    
 
 class RoomId(APIView):
@@ -1059,9 +1192,107 @@ class RoomId(APIView):
                 room = Room.objects.get(course=course)  # Use get instead of filter
                 print(room, 99999999999999999999999999999)
                 serializer = RoomSerializer(room)
-                print(serializer.data, 77777777777777777777777777777777)
+                print(serializer.data)
                 return Response(serializer.data, status=status.HTTP_200_OK)
         except Course.DoesNotExist:
             return Response({"error": "Course not found"}, status=status.HTTP_404_NOT_FOUND)
         except Room.DoesNotExist:
             return Response({"error": "Room not found for the given course"}, status=status.HTTP_404_NOT_FOUND)
+
+#<----------------------------------------------------------------------------------------------------------------------------->
+class CompletionPercentageAPIView(APIView):
+    def get(self, request):
+        try:
+            student_id = request.query_params.get('student_id')
+            course_id = request.query_params.get('id')
+            print(student_id,course_id)
+            completed_chapters_count = StudentChapter.objects.filter(student_id=student_id, chapter__module__course_id=course_id).count()
+            print(completed_chapters_count,88888888888888888888888888888)
+            completed_assignments_count = StudentAssignment.objects.filter(student_id=student_id, assignment__course_id=course_id).count()
+            print(completed_assignments_count,77777777777777777777777777777777)
+            completed_quizzes_count = StudentQuiz.objects.filter(student_id=student_id, quiz__course_id=course_id).count()
+            print(completed_quizzes_count,6666666666666666666666)
+            total_chapters_count = Chapter.objects.filter(module__course_id=course_id).count()
+            total_assignments_count = Assignment.objects.filter(course_id=course_id).count()
+            total_quizzes_count = Quiz.objects.filter(course_id=course_id).count()
+            
+            # Calculate the completion percentage for each component
+            chapters_percentage = (completed_chapters_count / total_chapters_count) * 100 if total_chapters_count != 0 else 0
+            assignments_percentage = (completed_assignments_count / total_assignments_count) * 100 if total_assignments_count != 0 else 0
+            quizzes_percentage = (completed_quizzes_count / total_quizzes_count) * 100 if total_quizzes_count != 0 else 0
+            
+            # Calculate the overall completion percentage
+            overall_percentage = (chapters_percentage + assignments_percentage + quizzes_percentage) / 4
+            
+            return Response( overall_percentage, status=status.HTTP_200_OK)
+        
+        except:
+            return Response({'error': 'bad request'}, status=status.HTTP_400_BAD_REQUEST)
+#<-------------------------------------------------------------------------------------------------------------------------------------------------------------->
+class MessageView(APIView):
+    def get(self, request):
+        try:
+            room_id = request.query_params.get('id')
+            print(room_id,777777777777777777777777777777777777777777777777777777)
+            messages = Message.objects.filter(room=room_id)
+            print(messages,88888888888888888888888888888888888888)
+            serializer = MessageSerializer(messages, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Room.DoesNotExist:
+            return Response({"error": "Room not found for the given course"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)        
+        
+class StudentChapterView(APIView):
+    def post(self, request):
+      try:
+        student_id = request.data.get('id')
+        chapter_id = request.data.get('chapter')
+        print(student_id,chapter_id)
+        if student_id and chapter_id:
+            print(88888888888888888888888888888888888888888888888888)
+            chapter = StudentChapter.objects.filter(student=student_id, chapter=chapter_id).first()
+            print(chapter,777777777777777777777777777777777777777777777777777)
+            if not chapter:
+                data = {'student': student_id, 'chapter': chapter_id}
+                serializer = StudentChapterSerializer(data=data)
+                if serializer.is_valid():
+                    serializer.save()
+                    print(77777777777777777777777777777777777777777777777777777777777777777777)
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                else:
+                    print(serializer.error)
+                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+      except:
+        return Response({"details":"Internal Error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+      
+class StudentCertificateView(APIView):
+    def get(self,request):
+        try:
+            student = request.query_params.get('id')
+            course = request.query_params.get('course')
+            print(student,777777777777777777777777777777777777777777777777777777)
+            certificate = StudentCertificate.objects.filter(student=student,course=course).first()
+            print(certificate,88888888888888888888888888888888888888)
+            if certificate is not None: 
+                serializer = StudentCertificateSerializer(certificate)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            else:
+                 return Response({"message": "No certificate exist."}, status=200)
+        except certificate.DoesNotExist:
+            return Response({"error": "certificate not found"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)        
+
+    def post(self, request):
+        try:
+            student_id = request.data.get('student')
+            print(request.data,7777777777777777777777777777777777777777777777777777777)
+            if student_id:
+                serializer = StudentCertificateSerializer(data=request.data)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                else:
+                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return Response({"details": "Invalid data provided"}, status=status.HTTP_400_BAD_REQUEST)
+        except:
+            return Response({"details":"Internal Error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)    

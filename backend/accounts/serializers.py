@@ -7,7 +7,7 @@ from django.contrib.auth import get_user_model
 # from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from phonenumber_field.serializerfields import PhoneNumberField
-from.models import UserAccount,CourseCategory,Course,TeacherProfile,StudentProfile,Module,Chapter,Assignment,Quiz,Questions,Order,StudentCourse,StudentAssignment,StudentQuiz,Masterclass,Shedule,Room,Message
+from.models import UserAccount,CourseCategory,Course,TeacherProfile,StudentProfile,Module,Chapter,Assignment,Quiz,Questions,Order,StudentCourse,StudentAssignment,StudentQuiz,Masterclass,Shedule,Room,Message,StudentChapter,StudentCertificate
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 
@@ -102,6 +102,7 @@ class CourseCategorySerializer(serializers.ModelSerializer):
         model = CourseCategory
         fields = '__all__'
 #<-------------------------------------------------------------------------------------------------------------------->
+        
 
 class TeacherSerializer(serializers.ModelSerializer):
     user_id = serializers.IntegerField(source='user.id', read_only=True)
@@ -113,7 +114,7 @@ class TeacherSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = TeacherProfile
-        fields = ['user_id','full_name','email','phone_number','profile_pic','is_active','years_of_experience','company_name','job_role','about']      
+        fields = ['user_id','full_name','email','phone_number','profile_pic','is_active','years_of_experience','company_name','job_role','about','account']      
 
 #<---------------------------------------------------------------------------------------------------------------------->
 class StudentSerializer(serializers.ModelSerializer):
@@ -210,7 +211,7 @@ class StudentQuizsSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserAccount
-        exclude = ["password"]
+        fields=['full_name','profile_pic']
                  
   
 class MessageSerializer(serializers.ModelSerializer):
@@ -235,3 +236,24 @@ class StudentProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = StudentProfile
         fields = '__all__'    
+
+class TeacherProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TeacherProfile
+        fields = '__all__'            
+class ProfilePicSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=UserAccount
+        fields=['profile_pic']        
+
+
+class StudentChapterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StudentChapter
+        fields = '__all__'         
+
+        
+class StudentCertificateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StudentCertificate
+        fields = '__all__'                 
