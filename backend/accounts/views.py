@@ -292,6 +292,7 @@ class ContactFormView(APIView):
                                               # Admin View
 #<---------------------------------------------------------------------------------------------------------------------------->
 class TeacherListView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         teachers = TeacherProfile.objects.all()
         teacher_data = []
@@ -328,6 +329,7 @@ class TeacherListView(APIView):
             return Response({'detail': 'Teacher not found.'}, status=status.HTTP_404_NOT_FOUND)
 #<------------------------------------------------------------------------------------------------------------------------>                 
 class StudentListView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         students = StudentProfile.objects.all()
         student_data=[]
@@ -364,6 +366,7 @@ class StudentListView(APIView):
             return Response({'detail': 'Student not found.'}, status=status.HTTP_404_NOT_FOUND)
 #<--------------------------------------------------------------------------------------------------------------------->
 class AdminCourse(APIView):     
+     permission_classes = [IsAuthenticated]
      def get(self, request):
         course = Course.objects.all()
         serializer = CourseSerializer(course, many=True)
@@ -411,7 +414,8 @@ class AdminCourse(APIView):
         except UserAccount.DoesNotExist:
             return Response({'detail': 'Course not found.'}, status=status.HTTP_404_NOT_FOUND)
 #<---------------------------------------------------------------------------------------------------------------------------------------------->
-class AdminCourseDetails(APIView):  
+class AdminCourseDetails(APIView): 
+     permission_classes = [IsAuthenticated] 
      def get(self,request):
         try: 
             course_id = request.query_params.get('id')
@@ -454,6 +458,7 @@ class AdminCourseDetails(APIView):
             return Response({'error': 'Course not found'}, status=status.HTTP_404_NOT_FOUND)
 #<------------------------------------------------------------------------------------------------------------------------------------------------------->
 class DashBoard(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         total_teachers = UserAccount.objects.filter(role=UserAccount.TEACHER).count()
         total_students = UserAccount.objects.filter(role=UserAccount.STUDENT).count()
@@ -481,6 +486,7 @@ class DashBoard(APIView):
         })
 #<-------------------------------------------------------------------------------------------------------------------->
 class SalesReport(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self,request):
         orders = Order.objects.all()
         sales_data = []
@@ -505,7 +511,7 @@ class SalesReport(APIView):
                  # Teacher Views
 #<------------------------------------------------------------------------------------------------------------->
 class TeacherCourse(APIView):
-   
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         try:
             teacher_id = request.query_params.get('id')
@@ -528,6 +534,7 @@ class TeacherCourse(APIView):
             return Response({'detail': 'Teacher not found.'}, status=status.HTTP_404_NOT_FOUND)
 #<-------------------------------------------------------------------------------------------------------------------->
 class CourseDetailView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self,request):
         try: 
             course_id = request.query_params.get('id')
@@ -550,6 +557,7 @@ class CourseDetailView(APIView):
             return Response({'error': 'Course not found'}, status=status.HTTP_404_NOT_FOUND)     
 #<------------------------------------------------------------------------------------------------------------------>
 class ModuleView(APIView): 
+    permission_classes = [IsAuthenticated]
     def get(self,request):
         try:
             course_id = request.query_params.get('id')
@@ -595,6 +603,7 @@ class ModuleView(APIView):
 
 #<---------------------------------------------------------------------------------------------------------------------->
 class ChapterView(APIView):
+    permission_classes = [IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request, *args, **kwargs):
@@ -619,6 +628,7 @@ class ChapterView(APIView):
             
 #<-------------------------------------------------------------------------------------------------------------->
 class TeacherAssignemnt(APIView):
+    permission_classes = [IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser)
     def get(self, request):
         try:
@@ -662,6 +672,7 @@ class TeacherAssignemnt(APIView):
             return Response({"error": "Assignment not found"}, status=status.HTTP_404_NOT_FOUND)
 #<--------------------------------------------------------------------------------------->    
 class TeacherQuiz(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self,request):
         try:
             course_id=request.query_params.get('id')
@@ -704,6 +715,7 @@ class TeacherQuiz(APIView):
             return Response({"error": "Quiz not found"}, status=status.HTTP_404_NOT_FOUND)
 #<--------------------------------------------------------------------------------------------------------->
 class TeacherQuestions(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self,request):
         try:
             quiz_id=request.query_params.get('id')
@@ -734,6 +746,7 @@ class TeacherQuestions(APIView):
             return Response({"error": "Question not found"}, status=status.HTTP_404_NOT_FOUND)
 #<---------------------------------------------------------------------------------------------------------------------->
 class TeacherAllAssignment(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
     def get(self,request):
         try:
             teacher_id = request.query_params.get('id')
@@ -771,6 +784,7 @@ class TeacherAllAssignment(generics.ListAPIView):
     
 # <----------------------------------------------------------------------------------------------------------------------->
 class TeacherAllQuiz(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
     def get(self,request):
         try:
             teacher_id = request.query_params.get('id')
@@ -810,6 +824,7 @@ class TeacherAllQuiz(generics.ListAPIView):
         return Response({'error': 'Course ID not provided'}, status=status.HTTP_400_BAD_REQUEST)
 #<---------------------------------------------------------------------------------------------------------------------->    
 class TeacherProfileView(APIView):
+    permission_classes = [IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser)
     def get(self, request):
         teacher_id = request.query_params.get('teacher_id')
@@ -845,6 +860,7 @@ class TeacherProfileView(APIView):
 
 #<----------------------------------------------------------------------------------------------------------------->
 class SheduleApiView(APIView):    
+    permission_classes = [IsAuthenticated]
     def get(self,request):
         try:
             teacher_id = request.query_params.get('id')
@@ -885,6 +901,7 @@ class SheduleApiView(APIView):
                          #Student Views
 #<-------------------------------------------------------------------------------------------------------------------------------------->
 class OrderApiView(APIView):
+    permission_classes = [IsAuthenticated]
     def post(self,request):
         amount = request.data.get('amount')
         month = request.data.get('month')
@@ -927,6 +944,7 @@ class OrderApiView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)    
     
 class HandlePaymentSuccessView(APIView):
+    permission_classes = [IsAuthenticated]
     def post(self, request, *args, **kwargs):
         ord_id = request.data.get('razorpay_order_id')
         try:
@@ -944,6 +962,7 @@ class HandlePaymentSuccessView(APIView):
             return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)   
 #<---------------------------------------------------------------------------------------------------------->        
 class CheckPayment(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         try:
             student_id = request.query_params.get('id')
@@ -962,6 +981,7 @@ class CheckPayment(APIView):
             return Response({"message": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 #<-------------------------------------------------------------------------------------------------------------->         
 class StudentCourseApiView(APIView):
+    permission_classes = [IsAuthenticated]
     def post(self, request):
         print(request.data)
         serializer = StudentCourseSerializer(data=request.data)
@@ -1017,6 +1037,7 @@ class StudentCourseApiView(APIView):
             return Response({'detail': 'Student not found.'}, status=status.HTTP_404_NOT_FOUND)
 #<----------------------------------------------------------------------------------------------------------->
 class StudentCourseDetails(APIView):
+     permission_classes = [IsAuthenticated]
      def get(self,request):
         try: 
             course_id = request.query_params.get('id')
@@ -1042,6 +1063,7 @@ class StudentCourseDetails(APIView):
 
 #<-------------------------------------------------------------------------------------------------------------->        
 class StudentModule(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         course_id = request.query_params.get('id')
         print(course_id, 888888888888888888888888)
@@ -1068,6 +1090,7 @@ class StudentModule(APIView):
         return Response({'error': 'Course ID not provided'}, status=status.HTTP_400_BAD_REQUEST)
     #<------------------------------------------------------------------------------------------------->
 class StudentAssignemntApiView(APIView):
+    permission_classes = [IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser)
     def get(self, request):
         try:
@@ -1106,6 +1129,7 @@ class StudentAssignemntApiView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)    
 #<--------------------------------------------------------------------------------------------------------------------->
 class StudentQuizApiView(APIView):
+    permission_classes = [IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser)
     
     def get(self, request):
@@ -1148,6 +1172,7 @@ class StudentQuizApiView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)    
 #<------------------------------------------------------------------------------------------------------------------->
 class StudentProfileView(APIView):
+    permission_classes = [IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser)
     def get(self, request):
         student_id = request.query_params.get('student_id')
@@ -1183,6 +1208,7 @@ class StudentProfileView(APIView):
 #<-------------------------------------------------------------------------------------------------------------------------------------------------------------->    
 
 class RoomId(APIView):
+     permission_classes = [IsAuthenticated]
      def get(self, request):
         try:
             course_id = request.query_params.get('id')
@@ -1201,6 +1227,7 @@ class RoomId(APIView):
 
 #<----------------------------------------------------------------------------------------------------------------------------->
 class CompletionPercentageAPIView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         try:
             student_id = request.query_params.get('student_id')
@@ -1230,6 +1257,7 @@ class CompletionPercentageAPIView(APIView):
             return Response({'error': 'bad request'}, status=status.HTTP_400_BAD_REQUEST)
 #<-------------------------------------------------------------------------------------------------------------------------------------------------------------->
 class MessageView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         try:
             room_id = request.query_params.get('id')
@@ -1242,6 +1270,7 @@ class MessageView(APIView):
             return Response({"error": "Room not found for the given course"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)        
         
 class StudentChapterView(APIView):
+    permission_classes = [IsAuthenticated]
     def post(self, request):
       try:
         student_id = request.data.get('id')
@@ -1266,6 +1295,7 @@ class StudentChapterView(APIView):
         return Response({"details":"Internal Error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
       
 class StudentCertificateView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self,request):
         try:
             student = request.query_params.get('id')
